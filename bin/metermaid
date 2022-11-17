@@ -1,7 +1,43 @@
 #!/bin/bash
 
+USAGE="
+metermaid # retrieve the most recent reading
+metermaid -n 10 # retrieve the most recent 10 readings
+TODO metermaid ls # list files (in reverse chronological order)
+TODO metermaid interval 60 # retrieve one reading every 60 minutes starting with the latest and going backward
+"
 #TODO get this from opts
 VERBOSE=
+COUNT=1
+
+while [[ -n "$@" ]]; do
+  #echo "iteratate: $1; ARGS=$ARGS" 1>&2
+  case "$1" in
+
+		-n|--number)
+			COUNT="$2"
+			shift; shift
+			;;
+		-h|--help)
+			echo "$USAGE"; exit 0
+			;;
+		-v|--verbose)
+			VERBOSE=1
+			shift
+			;;
+		-- )
+			shift
+			;;
+		-* )
+			echo "bad argument $1"
+			echo "$USAGE"; exit 1
+			;;
+		* )
+			ARGS="$ARGS $1"
+			shift
+			;;
+  esac
+done
 
 echoerr() { echo "$@" 1>&2; }
 
@@ -12,10 +48,13 @@ fi
 APP_PATH=$(dirname $(dirname $(readlink -f "$0")))
 
 READ_METER_COMMAND="python3 $APP_PATH/read_meter.py"
-LATEST_IMAGE="$APP_PATH/raw-images/$(ls -1t "$APP_PATH/raw-images/" | grep -v "jpg.*jpg$" | head -n1)"
 
 echoerr "The script you are running has basename $( basename -- "$0"; ), dirname $( dirname -- "$0"; )";
 echoerr "The present working directory is $( pwd; )";
-echoerr "the app path is $(dirname $(dirname $(readlink -f "$0")))"
+echoerr "the app path is $APP_PATH"
 
-$READ_METER_COMMAND noop $LATEST_IMAGE
+IMAGE_LIST="$(find "$APP_PATH/raw-images/" -name "*[0-9].jpg" | sort -r | head -n$COUNT)"
+
+echo $IMAGE_LIST
+
+$READ_METER_COMMAND noop $IMAGE_LIST
