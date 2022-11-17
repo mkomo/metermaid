@@ -198,10 +198,9 @@ def main(argv):
   '''
 
   for filename in argv[1:]:
-    if filename == 'latest':
-
-    elif not os.path.exists(filename):
+    if len(filename) > 0 and not os.path.exists(filename):
       printerr("Usage: python3 read_meter.py <show|save> <image>(...)")
+      printerr(argv)
       sys.exit(1)
     analyze_raw(filename, action)
 
