@@ -1,22 +1,21 @@
 #!/bin/bash
 
 #TODO get this from opts
-VERBOSE=1
+VERBOSE=
 
-FLAGS=2>/dev/null
+echoerr() { echo "$@" 1>&2; }
 
+if [ -z "$VERBOSE" ]; then
+  exec 2>/dev/null
+fi
 
 APP_PATH=$(dirname $(dirname $(readlink -f "$0")))
 
 READ_METER_COMMAND="python3 $APP_PATH/read_meter.py"
 LATEST_IMAGE="$APP_PATH/raw-images/$(ls -1t "$APP_PATH/raw-images/" | grep -v "jpg.*jpg$" | head -n1)"
 
-if [ -n "$VERBOSE" ]; then
-  echo "The script you are running has basename $( basename -- "$0"; ), dirname $( dirname -- "$0"; )";
-  echo "The present working directory is $( pwd; )";
-  echo "the app path is $(dirname $(dirname $(readlink -f "$0")))"
+echoerr "The script you are running has basename $( basename -- "$0"; ), dirname $( dirname -- "$0"; )";
+echoerr "The present working directory is $( pwd; )";
+echoerr "the app path is $(dirname $(dirname $(readlink -f "$0")))"
 
-  $READ_METER_COMMAND noop $LATEST_IMAGE
-else
-  $READ_METER_COMMAND noop $LATEST_IMAGE 2>/dev/null
-fi
+$READ_METER_COMMAND noop $LATEST_IMAGE
