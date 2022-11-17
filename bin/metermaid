@@ -8,6 +8,7 @@ TODO metermaid interval 60 # retrieve one reading every 60 minutes starting with
 "
 #TODO get this from opts
 VERBOSE=
+FILE=
 COUNT=1
 
 while [[ -n "$@" ]]; do
@@ -16,6 +17,10 @@ while [[ -n "$@" ]]; do
 
 		-n|--number)
 			COUNT="$2"
+			shift; shift
+			;;
+		-f|--file)
+			FILE="$2"
 			shift; shift
 			;;
 		-h|--help)
@@ -53,8 +58,10 @@ echoerr "The script you are running has basename $( basename -- "$0"; ), dirname
 echoerr "The present working directory is $( pwd; )";
 echoerr "the app path is $APP_PATH"
 
-IMAGE_LIST="$(find "$APP_PATH/raw-images/" -name "*[0-9].jpg" | sort -r | head -n$COUNT)"
-
-echo $IMAGE_LIST
+if [ -z "$FILE" ]; then
+	IMAGE_LIST="$(find "$APP_PATH/raw-images/" -name "*[0-9].jpg" | sort -r | head -n$COUNT)"
+else
+	IMAGE_LIST=$FILE
+fi
 
 $READ_METER_COMMAND noop $IMAGE_LIST
