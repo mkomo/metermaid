@@ -128,9 +128,10 @@ def validate_value(value, previous_value):
   # handle case where value is very close to an integer (ie 7.999999 vs 8.00001)
   if previous_value is not None:
     tenth = (value - floor(value)) * 10
-    if tenth < 1 and previous_value > 9:
+    printerr('validate_value', value, previous_value)
+    if tenth < 3 and previous_value > 7:
       return np.nextafter(floor(value), floor(value) - 1)
-    elif previous_value < 1 and tenth > 9:
+    elif previous_value < 3 and tenth > 7:
       return np.nextafter(ceil(value), ceil(value) + 1)
   return value
 
