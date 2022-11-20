@@ -4,7 +4,7 @@ import sys
 import os
 import cv2
 import numpy as np
-from math import atan2, pi, floor
+from math import atan2, pi, floor, ceil
 from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 from collections import OrderedDict
@@ -81,7 +81,7 @@ def analyze_contour(pts, img):
   # make sure the ray is pointing from the center_of_mass toward the bb center along the principal component.
   factor = sign(center_of_mass, eigenvectors[0], bbrect[0])
   p1 = (center_of_mass[0] + eigenvectors[0,0] * 100 * factor, center_of_mass[1] + eigenvectors[0,1] * 100 * factor)
-  printerr(dial["factor"], mean[0], center_of_mass, bbrect[0])
+  # printerr(dial["factor"], mean[0], center_of_mass, bbrect[0])
   angle = atan2(eigenvectors[0,1] * factor, eigenvectors[0,0] * factor) # orientation in radians
 
   # Annotate the image by drawing the contours that were used
@@ -99,16 +99,16 @@ def sign(origin, vector, point):
   vals = [(point[1] - perpendicular_slope * (point[0] - origin[0]) - origin[1]) for point in [np.add(origin, vector), point]]
   return 1 if vals[0] * vals[1] > 0 else -1
 
-def get_dial_value(dial_spec, angle, precise = False):
+def get_dial_value(dial_spec, angle):
   angle_deg = (angle * 180 / pi + 90) % 360
   value = angle_deg / 36
   value = value if dial_spec['clockwise'] else (10 - value)
-  # printerr([
-  #   dial,
-  #   angle_deg,
-  #   value
-  # ])
-  return (value if precise else floor(value)) * dial_spec['factor']
+  printerr([
+    dial_spec,
+    value
+  ])
+
+  return value
 
 
 def unskew_dials(original):
@@ -123,18 +123,32 @@ def unskew_dials(original):
     matrix = cv2.getPerspectiveTransform(pts1, pts2)
     return cv2.warpPerspective(original, matrix, (PROJECTED_WIDTH, PROJECTED_HEIGHT))
 
+
+def validate_value(value, previous_value):
+  # handle case where value is very close to an integer (ie 7.999999 vs 8.00001)
+  if previous_value is not None:
+    tenth = (value - floor(value)) * 10
+    if tenth < 1 and previous_value > 9:
+      return np.nextafter(floor(value), floor(value) - 1)
+    elif previous_value < 1 and tenth > 9:
+      return np.nextafter(ceil(value), ceil(value) + 1)
+  return value
+
 def calculate_total(dials):
   approx = 0
   reading = 0
+  previous_value = None
   test = {}
-  for factor in dials:
+  for factor in sorted(dials):
     spec, angle = dials[factor]
-    printerr(spec, angle)
+    value = get_dial_value(spec, angle)
     if spec.get("test", False):
-      test.update({spec['factor']:get_dial_value(spec, angle, True)})
+      test.update({spec['factor']: value * spec['factor']})
     else:
-      approx += get_dial_value(spec, angle)
-      reading += get_dial_value(spec, angle, spec.get('precise'))
+      value = validate_value(value, previous_value)
+      approx += floor(value) * spec['factor']
+      reading += (value if spec.get('precise') else floor(value)) * spec['factor']
+      previous_value = value
   return OrderedDict({
     'approx': approx,
     'reading': reading,
