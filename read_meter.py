@@ -41,6 +41,7 @@ def get_dial_spec(c, cntr):
   elif len(dial_list) > 1:
     raise "too many dials found close to center of contour"
 
+  printerr('get_dial_spec', cntr, dial_list)
   return dial_list[0]
 
 def compare_thresholds(result):
@@ -58,7 +59,7 @@ def compare_thresholds(result):
       plt.xticks([]),plt.yticks([])
   plt.show()
 
-def analyze_contour(pts, img):
+def analyze_contour(pts, img, dials):
   #PCA
   sz = len(pts)
   data_pts = np.empty((sz, 2), dtype=np.float64)
@@ -68,12 +69,16 @@ def analyze_contour(pts, img):
   mean, eigenvectors, eigenvalues = cv2.PCACompute2(data_pts, np.empty((0)))
   M = cv2.moments(pts)
   if not M["m00"]:
-    return {}
+    return
   center_of_mass = [M["m10"] / M["m00"], M["m01"] / M["m00"]]
 
   dial = get_dial_spec(pts, center_of_mass)
   if not dial:
-    return {}
+    return
+
+  if dial["factor"] in dials:
+    printerr('analyze_contour', 'found duplicate dial')
+    return
 
   bbrect = cv2.minAreaRect(pts)
   bb = cv2.boxPoints(bbrect)
@@ -92,7 +97,7 @@ def analyze_contour(pts, img):
   cv2.circle(img, np.int0(bbrect[0]), 3, (255, 126, 0), 2)
   cv2.circle(img, np.int0(center_of_mass), 3, (0, 226, 0), 2)
 
-  return {dial["factor"]: (dial, angle)}
+  dials.update({dial["factor"]: (dial, angle)})
 
 def sign(origin, vector, point):
   perpendicular_slope = -1 * vector[0] / vector[1]
@@ -103,10 +108,10 @@ def get_dial_value(dial_spec, angle):
   angle_deg = (angle * 180 / pi + 90) % 360
   value = angle_deg / 36
   value = value if dial_spec['clockwise'] else (10 - value)
-  printerr([
-    dial_spec,
-    value
-  ])
+  printerr('get_dial_value', {
+    'spec': dial_spec,
+    'value': value
+  })
 
   return value
 
@@ -183,7 +188,7 @@ def analyze_raw(filename, action='show'):
     if contours:
         for c in contours:
             # Find the orientation of each shape
-            dials.update(analyze_contour(c, result))
+            analyze_contour(c, result, dials)
 
     add_caption(result, filename, dials)
 
@@ -194,7 +199,8 @@ def analyze_raw(filename, action='show'):
       cv2.imshow('skewed', result)
       cv2.waitKey(0)
     elif action == 'save':
-      new_filename = filename + '.annotated.jpg'
+      # TODO remove first jpg for easier globbing?
+      new_filename = filename + '.ANNOTATED.JPG'
       cv2.imwrite(new_filename, result)
       printerr('saved to', new_filename)
 
@@ -214,7 +220,7 @@ def main(argv):
 
   for filename in argv[1:]:
     if len(filename) > 0 and not os.path.exists(filename):
-      printerr("Usage: python3 read_meter.py <show|save> <image>(...)")
+      printerr("Usage: python3 read_meter.py <show|save|noop> <image>(...)")
       printerr(argv)
       sys.exit(1)
     analyze_raw(filename, action)
