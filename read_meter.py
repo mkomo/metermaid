@@ -17,10 +17,10 @@ MAX_DIAL_DISTANCE = 45
 
 DIALS = [
   # coord, clockwise, factor
-  { "center": [93, 83], "clockwise": False, "factor": 1000000 },
-  { "center": [172,83], "clockwise":  True, "factor": 100000 },
-  { "center": [242,83], "clockwise": False, "factor": 10000 },
-  { "center": [317,83], "clockwise":  True, "factor": 1000, "precise": True},
+  { "center": [93, 83], "clockwise": False, "factor": 100000 },
+  { "center": [172,83], "clockwise":  True, "factor": 10000 },
+  { "center": [242,83], "clockwise": False, "factor": 1000 },
+  { "center": [317,83], "clockwise":  True, "factor": 100, "precise": True},
 
   # 1,037 BTU/cubic foot of natural gas, so ~500 BTU per revolution of 0.5 cu ft dial,
   # and ~2000 BTU to get both the 0.5 and 2cf to the same test dial state.
