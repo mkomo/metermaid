@@ -58,6 +58,7 @@ echoerr "The script you are running has basename $( basename -- "$0"; ), dirname
 echoerr "The present working directory is $( pwd; )";
 echoerr "the app path is $APP_PATH"
 
+# TODO handle globs in file
 if [ -z "$FILE" ]; then
 	IMAGE_LIST="$(find "$APP_PATH/raw-images/" -name "*[0-9].jpg" | sort -r | head -n$COUNT)"
 else

@@ -55,22 +55,12 @@ def get_diff(entry, last_diff, dial_to_check):
 
 def process_file(file):
   last_diff = None
-  rate_times = []
-  rate_vals = []
   for line in file:
     entry = json.loads(line)
     dial_to_check = '0.2'
     diff = get_diff(entry, last_diff, dial_to_check)
     if diff is not None:
       last_diff = diff
-      if 'rate' in diff:
-        rate_vals.append(diff['rate'])
-        rate_times.append(diff['timestamp'])
-
-  import matplotlib.pyplot as plt
-  plt.plot(rate_times[500:], rate_vals[500:], ds="steps-pre")
-  # plt.scatter(rate_times, rate_vals, c ="blue", s=1)
-  plt.show()
 
 
 
