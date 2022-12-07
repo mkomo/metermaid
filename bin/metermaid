@@ -52,7 +52,7 @@ fi
 
 APP_PATH=$(dirname $(dirname $(readlink -f "$0")))
 
-READ_METER_COMMAND="python3 $APP_PATH/read_meter.py"
+READ_METER_COMMAND="python3 $APP_PATH/read_meter_images.py"
 
 echoerr "The script you are running has basename $( basename -- "$0"; ), dirname $( dirname -- "$0"; )";
 echoerr "The present working directory is $( pwd; )";

@@ -219,8 +219,8 @@ def main(argv):
   '''
 
   for filename in argv[1:]:
-    if len(filename) > 0 and not os.path.exists(filename):
-      printerr("Usage: python3 read_meter.py <show|save|noop> <image>(...)")
+    if not os.path.exists(filename):
+      printerr("Usage: python3 read_meter_images.py <show|save|noop> <image>(...)")
       printerr(argv)
       sys.exit(1)
     analyze_raw(filename, action)

@@ -11,7 +11,7 @@ nohup ffmpeg -y -i "rtsp://$VIDEO_HOST:554/user=$VIDEO_USER&password$VIDEO_PASSW
 
 ### translate raw image into machine-readable data snapshot
 ```bash
-python3 read_meter.py noop $IMAGE_DIR/gas-meter-????-??-??_??-??-??.jpg 2>/dev/null | tee test-set-2.ndjson
+python3 read_meter_images.py noop $IMAGE_DIR/gas-meter-????-??-??_??-??-??.jpg 2>/dev/null | tee test-set-2.ndjson
 ```
 
 
