@@ -3,6 +3,8 @@
 import sys
 import os
 import cv2
+import argparse
+import shutil
 import numpy as np
 from math import atan2, pi, floor, ceil
 from matplotlib import pyplot as plt
@@ -14,6 +16,8 @@ from datetime import datetime
 PROJECTED_WIDTH = 400
 PROJECTED_HEIGHT = 225
 MAX_DIAL_DISTANCE = 45
+
+DEBUG = False
 
 DIALS = [
   # coord, clockwise, factor
@@ -41,7 +45,7 @@ def get_dial_spec(c, cntr):
   elif len(dial_list) > 1:
     raise "too many dials found close to center of contour"
 
-  printerr('get_dial_spec', cntr, dial_list)
+  debug('get_dial_spec', cntr, dial_list)
   return dial_list[0]
 
 def compare_thresholds(result):
@@ -59,7 +63,7 @@ def compare_thresholds(result):
       plt.xticks([]),plt.yticks([])
   plt.show()
 
-def analyze_contour(pts, img, dials):
+def analyze_contour(pts, img, dials, filename):
   #PCA
   sz = len(pts)
   data_pts = np.empty((sz, 2), dtype=np.float64)
@@ -77,7 +81,7 @@ def analyze_contour(pts, img, dials):
     return
 
   if dial["factor"] in dials:
-    printerr('analyze_contour', 'found duplicate dial')
+    printerr('analyze_contour', 'found duplicate dial', filename, dial["factor"])
     return
 
   bbrect = cv2.minAreaRect(pts)
@@ -86,7 +90,7 @@ def analyze_contour(pts, img, dials):
   # make sure the ray is pointing from the center_of_mass toward the bb center along the principal component.
   factor = sign(center_of_mass, eigenvectors[0], bbrect[0])
   p1 = (center_of_mass[0] + eigenvectors[0,0] * 100 * factor, center_of_mass[1] + eigenvectors[0,1] * 100 * factor)
-  # printerr(dial["factor"], mean[0], center_of_mass, bbrect[0])
+  # debug(dial["factor"], mean[0], center_of_mass, bbrect[0])
   angle = atan2(eigenvectors[0,1] * factor, eigenvectors[0,0] * factor) # orientation in radians
 
   # Annotate the image by drawing the contours that were used
@@ -108,7 +112,7 @@ def get_dial_value(dial_spec, angle):
   angle_deg = (angle * 180 / pi + 90) % 360
   value = angle_deg / 36
   value = value if dial_spec['clockwise'] else (10 - value)
-  printerr('get_dial_value', {
+  debug('get_dial_value', {
     'spec': dial_spec,
     'value': value
   })
@@ -133,7 +137,7 @@ def validate_value(value, previous_value):
   # handle case where value is very close to an integer (ie 7.999999 vs 8.00001)
   if previous_value is not None:
     tenth = (value - floor(value)) * 10
-    printerr('validate_value', value, previous_value)
+    debug('validate_value', value, previous_value)
     if tenth < 3 and previous_value > 7:
       return np.nextafter(floor(value), floor(value) - 1)
     elif previous_value < 3 and tenth > 7:
@@ -175,8 +179,8 @@ def add_caption(result, filename, dials):
   print(json.dumps(outcome))
   cv2.putText(result, label, (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
 
-def analyze_raw(filename, action='show'):
-    original = cv2.imread(filename)
+def analyze_raw(f, action='show', options={}):
+    original = cv2.imread(f.name)
     result = unskew_dials(original)
 
     # find the dials and measure the angles
@@ -188,42 +192,64 @@ def analyze_raw(filename, action='show'):
     if contours:
         for c in contours:
             # Find the orientation of each shape
-            analyze_contour(c, result, dials)
+            analyze_contour(c, result, dials, f.name)
 
-    add_caption(result, filename, dials)
+    add_caption(result, f.name, dials)
 
     if action == 'noop':
       pass
+    elif action == 'archive':
+      if 'archive_dir' not in options:
+        raise(Exception('archive target not specified: ' + str(options)))
+      shutil.move(f.name, options['archive_dir'])
     elif action == 'show':
       # cv2.imshow('original', original)
       cv2.imshow('skewed', result)
       cv2.waitKey(0)
     elif action == 'save':
-      # TODO remove first jpg for easier globbing?
       new_filename = filename + '.ANNOTATED.JPG'
       cv2.imwrite(new_filename, result)
-      printerr('saved to', new_filename)
+      debug('saved to', new_filename)
+
+def debug(*args, **kwargs):
+  if DEBUG:
+    printerr(*args, **kwargs)
 
 def printerr(*args, **kwargs):
   print(*args, file=sys.stderr, **kwargs)
 
 def main(argv):
-  action = argv[0] if len(sys.argv) > 0 else ""
+  parser = argparse.ArgumentParser(
+    prog = __file__,
+    description = 'Read an image of a gas meter'
+  )
+  parser.add_argument('action', choices=['noop', 'archive', 'show', 'save'])
+  parser.add_argument('filename', nargs='+') # positional argument
+  parser.add_argument('--archive_dir')
+  parser.add_argument('-d', '--debug', action='store_true')   # on/off flag
+
+  args = parser.parse_args()
+
+  # action = argv[0] if len(sys.argv) > 0 else ""
 
   '''
   TODO
-  get deltas between readings
   find background usage
   find contiguous usages, total them, draw characteristic
   function to prune images (in some rrd/logrotate type fashion)
   '''
+  global DEBUG
+  if args.debug:
+    DEBUG = True
+    # pass
 
-  for filename in argv[1:]:
+  for filename in args.filename:
     if not os.path.exists(filename):
-      printerr("Usage: python3 read_meter_images.py <show|save|noop> <image>(...)")
-      printerr(argv)
+      printerr('could not find file: {}'.format(filename))
+      printerr()
+      printerr(parser.format_help())
       sys.exit(1)
-    analyze_raw(filename, action)
+    analyze_raw(open(filename), args.action, vars(args))
 
 
 if __name__ == '__main__':
