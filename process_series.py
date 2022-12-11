@@ -37,9 +37,11 @@ def get_diff(entry, last_diff, dial_to_check):
         if delta > 0:
           delta_time = timestamp - last_diff['timestamp']
           diff = {
+            'reading': entry['reading'],
             'val': val,
             'delta': delta,
             'delta_time': delta_time,
+            'delta_reading': entry['reading'] - last_diff['reading'],
             'rate': delta/delta_time,
             'date': entry['date'],
             'timestamp': timestamp
@@ -50,6 +52,7 @@ def get_diff(entry, last_diff, dial_to_check):
         # this line is the first entry in the input
         return {
           'val': val,
+          'reading': entry['reading'],
           'timestamp': timestamp
         }
 
@@ -74,7 +77,10 @@ def main(argv):
 
   file = open(filename, 'r')
 
-  process_file(file)
+  try:
+    process_file(file)
+  except BrokenPipeError as e:
+    pass
 
 if __name__ == '__main__':
   main(sys.argv[1:])
