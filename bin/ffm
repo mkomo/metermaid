@@ -1,0 +1,20 @@
+#!/bin/bash
+
+CAMERA_URL="rtsp://192.168.4.10:554/user=admin&password=&channel=4&stream=1.sdp?real_stream--rtp-caching=100"
+OUTPUT_DIR="/home/mkomorowski/utility-meter-reading/108-ashland/gas/img-grabs-1/"
+LOG_DIR="/home/mkomorowski/utility-meter-reading/108-ashland/gas"
+
+if ps aux | grep 'ffmpe[g]' > /dev/null; then
+  echo "ffmpeg is already running. last ten files captured:"
+  ls $OUTPUT_DIR | tail
+  exit 0
+fi
+
+LOG_FILE="$LOG_DIR/ffmpeg-out.log"
+echo "ffmpeg was not detected running, starting at $(date)" | ts > $LOG_FILE
+
+nohup ffmpeg -y -i $CAMERA_URL -reconnect 1 -reconnect_streamed 1 -r 0.1 -strftime 1 \
+  "$OUTPUT_DIR/gas-meter-%Y-%m-%d_%H-%M-%S.jpg" \
+  > >(ts > $LOG_FILE) &
+
+echo "process started with PID of $!"
