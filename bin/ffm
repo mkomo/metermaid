@@ -7,8 +7,7 @@ LOG_DIR="/home/mkomorowski/utility-meter-reading/108-ashland/gas"
 
 if ps aux | grep 'ffmpe[g]' > /dev/null; then
   CRON_LOG=$LOG_DIR/ffmpeg-cron.log
-  echo "ffmpeg is already running. last ten files captured:" >> $CRON_LOG
-  ls $OUTPUT_DIR | tail >> $CRON_LOG
+  echo "ffmpeg is already running. last file captured: $(ls $OUTPUT_DIR | tail -n1 )" | ts >> $CRON_LOG
   exit 0
 fi
 
