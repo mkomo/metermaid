@@ -1,0 +1,12 @@
+#!/bin/bash
+
+LOG_DIR="$1" #/home/mkomorowski/utility-meter-reading/108-ashland/gas
+
+
+APP_PATH=$(dirname $(dirname $(readlink -f "$0")))
+
+FETCH_THERMOSTAT_COMMAND="python3 $APP_PATH/fetch_thermostat_data.py"
+
+$FETCH_THERMOSTAT_COMMAND $LOG_DIR/thermostat_state.json \
+  2> >(ts >> $LOG_DIR/thermostat.log) \
+  >>$LOG_DIR/thermostat_data.ndjson
