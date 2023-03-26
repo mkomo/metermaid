@@ -5,6 +5,7 @@ import os
 import json
 import math
 from datetime import datetime
+import pytz
 
 # there might be noise in readings. If a dial jumps back more than this fraction, assume it has completed a full revolution
 MAX_JITTER = 0.5
@@ -31,7 +32,9 @@ def get_delta(val, last, dial_unit_string):
 def get_diff(entry, last_diff, dial_to_check):
   if dial_to_check in entry['test']:
       val = entry['test'][dial_to_check]
-      timestamp = datetime.strptime(entry['date'], "%Y-%m-%d %H:%M:%S").timestamp()
+      date = datetime.strptime(entry['date'], "%Y-%m-%d %H:%M:%S")
+      date = pytz.timezone('America/New_York').localize(date).astimezone(pytz.timezone('America/New_York'))
+      timestamp = date.timestamp()
       if last_diff is not None:
         delta = get_delta(val, last_diff['val'], dial_to_check)
         if delta > 0:
@@ -44,6 +47,7 @@ def get_diff(entry, last_diff, dial_to_check):
             'delta_reading': entry['reading'] - last_diff['reading'],
             'rate': delta/delta_time,
             'date': entry['date'],
+            'hour': datetime.strftime(date, '%Y-%m-%dT%H%Z'),
             'timestamp': timestamp
           }
           print(json.dumps(diff))

@@ -43,7 +43,8 @@ def get_dial_spec(c, cntr):
   if len(dial_list) == 0:
     return False
   elif len(dial_list) > 1:
-    raise "too many dials found close to center of contour"
+    printerr("too many dials found close to center of contour", dial_list)
+    # raise(Exception("too many dials found close to center of contour"))
 
   debug('get_dial_spec', cntr, dial_list)
   return dial_list[0]

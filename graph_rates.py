@@ -59,7 +59,3 @@ def main(argv):
 
 if __name__ == '__main__':
   main(sys.argv[1:])
-
-
-
-# MET10011/30/22 01:54:02 METAR KBUF 300654Z 15012KT 10SM BKN095 OVC190 08/01 A2972 RMK AO2 SLP066 T00830011
