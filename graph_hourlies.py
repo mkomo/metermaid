@@ -76,8 +76,6 @@ def process_file(file, options={}):
     else:
       hourcat = 'overnight'
 
-    hourcat = 'AM' if hour in [5,6] else ('PM' if hour in [21, 22] else 'normal')
-    print(hour, hourcat)
     hourcats.append(hourcat)
 
   if options.get('action') == 'scatter':
@@ -86,14 +84,6 @@ def process_file(file, options={}):
     ts(timestamps, temps, cfs)
 
 def ts(timestamps, temps, cfs):
-
-  # plt.plot(timestamps, cfs, ds="steps-pre")
-  # ax = plt.gca()
-
-  # scale = 1.5
-  # f = zoom_factory(ax,base_scale = scale)
-
-  # plt.show()
 
   hdds = [max(0,65 - t) for t in temps]
   cfphdd = [(0 if hdd < 1 else 24*cf/hdd) for cf,hdd in zip(cfs,hdds)]
@@ -106,12 +96,6 @@ def ts(timestamps, temps, cfs):
   ax1.set_ylabel('HDD', color=color)
   ax1.plot(timestamps, hdds, color=color)
   ax1.tick_params(axis='y', labelcolor=color)
-
-  # ax2 = ax1.twinx()
-  # color = 'blue'
-  # ax2.set_ylabel('cf/h', color=color)
-  # ax2.plot(timestamps, cfs, color=color)
-  # ax2.tick_params(axis='y', labelcolor=color)
 
   ax3 = ax1.twinx()
   color = 'green'

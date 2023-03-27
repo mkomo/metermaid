@@ -231,8 +231,6 @@ def main(argv):
 
   args = parser.parse_args()
 
-  # action = argv[0] if len(sys.argv) > 0 else ""
-
   '''
   TODO
   find background usage
@@ -242,7 +240,6 @@ def main(argv):
   global DEBUG
   if args.debug:
     DEBUG = True
-    # pass
 
   for filename in args.filename:
     if not os.path.exists(filename):
