@@ -12,10 +12,9 @@ if ps aux | grep 'ffmpe[g]' > /dev/null; then
 fi
 
 LOG_FILE="$LOG_DIR/ffmpeg-out.log"
-echo "ffmpeg was not detected running, starting at $(date)" | ts > $LOG_FILE
+echo "ffmpeg was not detected running, starting at $(date)" | ts >> $CRON_LOG
 
-nohup ffmpeg -y -i $CAMERA_URL -reconnect 1 -reconnect_streamed 1 -r 0.1 -strftime 1 \
-  "$OUTPUT_DIR/gas-meter-%Y-%m-%d_%H-%M-%S.jpg" \
-  > >(ts >> $LOG_FILE) &
+ffmpeg -y -i $CAMERA_URL -reconnect 1 -reconnect_streamed 1 -r 0.1 -strftime 1 \
+  "$OUTPUT_DIR/gas-meter-%Y-%m-%d_%H-%M-%S.jpg" > >(ts >> $LOG_FILE) 2>&1 &
 
-echo "process started with PID of $!"
+echo "process started with PID of $!" >> $CRON_LOG
