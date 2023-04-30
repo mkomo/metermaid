@@ -31,6 +31,7 @@ def update_bearer_token(state, statefile):
   response = requests.post(api_url)
   body = json.loads(response.text)
 
+  printerr('received response from api: {}'.format(response.text))
   state['bearer_token'] = body['access_token']
   state['bearer_token_expire_timestamp'] = body['expires_in'] + datetime.datetime.now().timestamp()
 
