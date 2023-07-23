@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 from collections import OrderedDict
 import json
+import functools
 from datetime import datetime
 
 PROJECTED_WIDTH = 400
@@ -37,7 +38,7 @@ DIALS = [
 
 def get_dial_spec(c, cntr):
   area = cv2.contourArea(c)
-  if not 400 < area < 700:
+  if not 300 < area < 700:
     return False
   dial_list = [dial for dial in DIALS if (cv2.norm(np.array(cntr) - np.array(dial["center"]), cv2.NORM_L2) < MAX_DIAL_DISTANCE)]
   if len(dial_list) == 0:
@@ -79,10 +80,12 @@ def analyze_contour(pts, img, dials, filename):
 
   dial = get_dial_spec(pts, center_of_mass)
   if not dial:
+    cv2.drawContours(img, [pts], 0, (0,199,255), 1)
     return
 
   if dial["factor"] in dials:
     printerr('analyze_contour', 'found duplicate dial', filename, dial["factor"])
+    cv2.drawContours(img, [pts], 0, (255,199,0), 1)
     return
 
   bbrect = cv2.minAreaRect(pts)
@@ -96,11 +99,11 @@ def analyze_contour(pts, img, dials, filename):
 
   # Annotate the image by drawing the contours that were used
   cv2.drawContours(img, [pts], 0, (0,0,255), 2)
-  cv2.drawContours(img, [np.int0(bb)], 0, (0,0,255), 2)
-  cv2.line(img, np.int0(center_of_mass), np.int0(p1), (0, 220, 55), 3, cv2.LINE_AA)
-  cv2.circle(img, np.int0(mean[0]), 3, (255, 0, 255), 2)
-  cv2.circle(img, np.int0(bbrect[0]), 3, (255, 126, 0), 2)
-  cv2.circle(img, np.int0(center_of_mass), 3, (0, 226, 0), 2)
+  cv2.drawContours(img, [np.intp(bb)], 0, (0,0,255), 2)
+  cv2.line(img, np.intp(center_of_mass), np.intp(p1), (0, 220, 55), 3, cv2.LINE_AA)
+  cv2.circle(img, np.intp(mean[0]), 3, (255, 0, 255), 2)
+  cv2.circle(img, np.intp(bbrect[0]), 3, (255, 126, 0), 2)
+  cv2.circle(img, np.intp(center_of_mass), 3, (0, 226, 0), 2)
 
   dials.update({dial["factor"]: (dial, angle)})
 
@@ -122,16 +125,67 @@ def get_dial_value(dial_spec, angle):
 
 
 def unskew_dials(original):
-    ### find the meter dial case
-    # skew from perspective to rectangle
-    pts1 = np.float32([[99, 145], [216, 127],
-                       [109, 228], [220,203]])
-    pts2 = np.float32([[0, 0], [PROJECTED_WIDTH, 0],
-                       [0, PROJECTED_HEIGHT], [PROJECTED_WIDTH, PROJECTED_HEIGHT]])
+  return unskew_dials_complex(original)
 
-    # Apply Perspective Transform Algorithm
-    matrix = cv2.getPerspectiveTransform(pts1, pts2)
-    return cv2.warpPerspective(original, matrix, (PROJECTED_WIDTH, PROJECTED_HEIGHT))
+def unskew_dials_complex(original):
+  '''
+    get histogram
+    set threshold based on 2x size of dial panel
+    find largest contour over threshold
+    simplify contour to quadrilateral
+  '''
+
+  ### figure out threshold
+  # histo = list(cv2.calcHist([out], [0], None, [256], [0,256]))
+  # print([i[0] for i in histo])
+  # print(sum([i[0] for i in histo]))
+  # print(out.shape, out.shape[0] * out.shape[1])
+  # tested this value on one image; seemed to work well
+  # TODO make this dynamic
+  thold = 248
+
+  out = original.copy()
+  imgray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+
+  _, thresh = cv2.threshold(imgray,thold,255, cv2.THRESH_BINARY)
+  cnts, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+  cnt = functools.reduce(lambda x, y: x if cv2.contourArea(x) > cv2.contourArea(y) else y, cnts)
+
+  # loop over our contours
+  debug('found contours', len(cnts))
+  rgb = [255,100,0]
+
+  cv2.drawContours(out, [cnt], 0, rgb, 1)
+
+  ch = cv2.convexHull(cnt)
+  debug('working on contour len={}, approxlen={}, area={}, bb={}, color={}'.format(
+    len(cnt), len(ch), cv2.contourArea(cnt), cv2.boundingRect(ch), rgb)
+  )
+  rect = cv2.minAreaRect(cnt)
+  box = np.intp(cv2.boxPoints(rect))
+  debug(box)
+  cv2.drawContours(out, [box], 0, rgb, 3)
+  cv2.drawContours(out, [ch], 0, rgb, 2)
+
+  cv2.putText(out, str(thold), (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1, cv2.LINE_AA)
+
+  ### show image
+  # cv2.imshow('result', np.concatenate((original, cv2.cvtColor(out, cv2.COLOR_BGR2RGB)), axis=1))
+  # input = cv2.waitKey(0)
+  # debug('received key', input)
+  # if input in [3, 27, 99]:
+  #   sys.exit(130)
+
+  pts1 = np.float32(cv2.boxPoints(rect))
+  pts2 = np.float32([
+    [0, 0],
+    [PROJECTED_WIDTH, 0],
+    [PROJECTED_WIDTH, PROJECTED_HEIGHT],
+    [0, PROJECTED_HEIGHT]])
+
+  # Apply Perspective Transform Algorithm
+  matrix = cv2.getPerspectiveTransform(pts1, pts2)
+  return cv2.warpPerspective(original, matrix, (PROJECTED_WIDTH, PROJECTED_HEIGHT))
 
 
 def validate_value(value, previous_value):
@@ -204,7 +258,6 @@ def analyze_raw(f, action='show', options={}):
         raise(Exception('archive target not specified: ' + str(options)))
       shutil.move(f.name, options['archive_dir'])
     elif action == 'show':
-      # cv2.imshow('original', original)
       cv2.imshow('skewed', result)
       cv2.waitKey(0)
     elif action == 'save':
